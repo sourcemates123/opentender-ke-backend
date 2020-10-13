@@ -12,7 +12,7 @@ written in Javascript for NodeJS 8.x & Elasticsearch 2.4.6
 
 - run command `npm install` in the root folder of this repository
 
-- prepare the data folder (see https://github.com/opentender-ug/opentender-data)
+- prepare the data folder (see https://github.com/opentender-ug-health/opentender-data)
 
 - copy file 'config.dist.js' to 'config.js' and make the changes to reflect your infrastructure
 
@@ -27,7 +27,7 @@ let settings = {
 		port: 9200,
 		log: ['info', 'error']
 	},
-	data: { // absolute paths to the data folders (see https://github.com/opentender-ug/opentender-data)
+	data: { // absolute paths to the data folders (see https://github.com/opentender-ug-health/opentender-data)
 		shared: '/var/www/opentender/data/shared',
 		path: '/var/www/opentender/data/backend',
 		tenderapi: '/var/www/opentender/data/tenderapi'
