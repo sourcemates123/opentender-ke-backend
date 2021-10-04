@@ -17,6 +17,8 @@ const fs = require('fs');
 const async = require('async');
 const Ajv = require('ajv');
 const status = require('node-status');
+const cloneDeep = require('lodash.clonedeep');
+
 const console = status.console();
 
 let status_tenders = status.addItem('tenders', {type: ['count']});
@@ -129,8 +131,8 @@ let importTenderPackage = (array, filename, cb) => {
 	});
 
 	async.waterfall([
-		(next) => importBulk(array, store.Tender, status_tenders, next),
 		(next) => importBuyers(array, next),
+		(next) => importBulk(array, store.Tender, status_tenders, next),
 		(next) => importSuppliers(array, next)
 	], (err) => {
 		cb(err);
@@ -150,11 +152,47 @@ let importTenderPackageFile = (filename, cb) => {
 	});
 };
 
+let calculateContractsCountToBuyer = (buyer, item, cb) => {
+	if (!item || !buyer) {
+		return cb();
+	}
+	const tender = cloneDeep(item);
+	delete tender.buyers;
+
+
+	if (!buyer.tenders) {
+		buyer.tenders = [];
+	}
+	if (tender.lots) {
+		if (!buyer.contractsCount) {
+			buyer.contractsCount = 0;
+		}
+		buyer.contractsCount += tender.lots.reduce((sum, lot) => {
+			return sum + (lot.bids ? 1 : 0);
+		}, 0);
+	}
+	delete tender.lots;
+	buyer.tenders.push(tender);
+}
+
+let addCountryToBuyer = (buyer, tender, cb) => {
+	if (!tender || !buyer) {
+		return cb();
+	}
+	if (buyer.body.address && buyer.body.address.country) {
+		return;
+	}
+	if (buyer.body.address && !buyer.body.address.country) {
+		buyer.body.address.country = tender.country;
+	}
+}
+
 let importBuyers = (items, cb) => {
 	if (items.length === 0) {
 		return cb();
 	}
 	let buyers = [];
+	items = converter.cleanTenders(items);
 	items.forEach(item => {
 		(item.buyers || []).forEach(body => {
 			body.id = body.id || 'no-id';
@@ -170,6 +208,25 @@ let importBuyers = (items, cb) => {
 				};
 				buyers.push(buyer);
 			}
+			calculateContractsCountToBuyer(buyer, item);
+			addCountryToBuyer(buyer, item);
+			// const tender = cloneDeep(item);
+			// delete tender.buyers;
+			//
+			//
+			// if (!buyer.tenders) {
+			// 	buyer.tenders = [];
+			// }
+			// if (tender.lots) {
+			// 	if (!buyer.contractsCount) {
+			// 		buyer.contractsCount = 0;
+			// 	}
+			// 	buyer.contractsCount += tender.lots.reduce((sum, lot) => {
+			// 		return sum + (lot.bids ? 1 : 0);
+			// 	}, 0);
+			// }
+			// delete tender.lots;
+			// buyer.tenders.push(tender);
 			if (buyer.countries.indexOf(item.ot.country) < 0) {
 				buyer.countries.push(item.ot.country);
 			}
@@ -280,7 +337,10 @@ let importTenderPackageFiles = (filename, cb) => {
 	});
 };
 
+
 importTenderPackageFiles('KE-dataset.json', err => {
+// importTenderPackageFiles('KE-dataset-light.json', err => {
+// importTenderPackageFiles('tenderapi_0000_2015-01-01T00-00-00-000.json', err => {
 	if (err) {
 		console.log(err);
 	}
