@@ -152,32 +152,121 @@ let importTenderPackageFile = (filename, cb) => {
 	});
 };
 
-let calculateContractsCountToBuyer = (buyer, item, cb) => {
+let calculateContractsCountToBuyer = (buyer, item) => {
 	if (!item || !buyer) {
-		return cb();
+		return;
 	}
-	const tender = cloneDeep(item);
-	delete tender.buyers;
 
-
-	if (!buyer.tenders) {
-		buyer.tenders = [];
-	}
-	if (tender.lots) {
-		if (!buyer.contractsCount) {
-			buyer.contractsCount = 0;
+	if (item.lots) {
+		if (!buyer.body.contractsCount) {
+			buyer.body.contractsCount = 0;
 		}
-		buyer.contractsCount += tender.lots.reduce((sum, lot) => {
+		buyer.body.contractsCount += item.lots.reduce((sum, lot) => {
 			return sum + (lot.bids ? 1 : 0);
 		}, 0);
 	}
-	delete tender.lots;
-	buyer.tenders.push(tender);
 }
 
-let addCountryToBuyer = (buyer, tender, cb) => {
+let	calculateCpvCodesToBuyer = (buyer, item) => {
+	if (!item || !buyer) {
+		return;
+	}
+	if (!buyer.body) {
+		buyer.body = {};
+	}
+	if (!buyer.body.sector) {
+		buyer.body.sector = {};
+	}
+	if (!buyer.body.sector.cpvs) {
+		buyer.body.sector.cpvs = [];
+	}
+
+	if (!item.buyers || !item.buyers.some((buyer) => buyer.id === buyer.id)) {
+		return;
+	}
+
+	if (!item.cpvs) {
+		return;
+	}
+
+	item.cpvs.forEach((cpv) => {
+		if (!buyer.body.sector.cpvs.includes(cpv.code)) {
+			buyer.body.sector.cpvs.push(cpv.code);
+		}
+	});
+};
+
+let calculateAwardDecisionDatesToBuyer = (buyer, item) => {
+	if (!item || !buyer) {
+		return;
+	}
+
+	if (!buyer.body) {
+		buyer.body = {};
+	}
+	if (!buyer.body.dates) {
+		buyer.body.dates = {};
+	}
+	if (!buyer.body.dates.awardDecisionDates) {
+		buyer.body.dates.awardDecisionDates = [];
+	}
+	if (!buyer.body.dates.awardDecisionYears) {
+		buyer.body.dates.awardDecisionYears = [];
+	}
+
+	if (!item.lots) {
+		return;
+	}
+	if (!item.buyers || !item.buyers.some((buyer) => buyer.id === buyer.id)) {
+		return;
+	}
+
+	item.lots.forEach((lot) => {
+		if (!lot.awardDecisionDate) {
+			return;
+		}
+		if (!buyer.body.dates.awardDecisionDates.includes(lot.awardDecisionDate)) {
+			buyer.body.dates.awardDecisionDates.push(lot.awardDecisionDate);
+		}
+		const year = new Date(lot.awardDecisionDate).getFullYear();
+		if (!buyer.body.dates.awardDecisionYears.includes(year)) {
+			buyer.body.dates.awardDecisionYears.push(year);
+		}
+	});
+};
+
+let calculateMostFrequentMarketToBuyer = (buyer, item) => {
+	if (!item || !buyer) {
+		return;
+	}
+	if (!buyer.body) {
+		buyer.body = {};
+	}
+	if (!buyer.body.sector) {
+		buyer.body.sector = {};
+	}
+
+	if (!item.buyers || !item.buyers.some((buyer) => buyer.id === buyer.id)) {
+		return;
+	}
+
+	if (!item.cpvs) {
+		return;
+	}
+	buyer.mostFrequentMarketMap = new Map();
+
+	item.cpvs.forEach((cpv) => {
+		const shortenCpv = cpv.code.toString().slice(0, 2);
+		if (!buyer.mostFrequentMarketMap.has(shortenCpv)) {
+			buyer.mostFrequentMarketMap.set(shortenCpv, 0);
+		}
+		buyer.mostFrequentMarketMap.set(shortenCpv, buyer.mostFrequentMarketMap.get(shortenCpv) + 1);
+	});
+};
+
+let addCountryToBuyer = (buyer, tender) => {
 	if (!tender || !buyer) {
-		return cb();
+		return;
 	}
 	if (buyer.body.address && buyer.body.address.country) {
 		return;
@@ -186,6 +275,35 @@ let addCountryToBuyer = (buyer, tender, cb) => {
 		buyer.body.address.country = tender.country;
 	}
 }
+
+let calculateTotalContractsToBuyer = (buyer, item) => {
+	if (!item || !buyer) {
+		return;
+	}
+	if (!buyer.body) {
+		buyer.body = {};
+	}
+	if (!buyer.body.company) {
+		buyer.body.company = {};
+	}
+	if (!buyer.body.company.totalValueOfContracts) {
+		buyer.body.company.totalValueOfContracts = 0;
+	}
+
+	if (!item.buyers || !item.buyers.some((buyer) => buyer.id === buyer.id)) {
+		return;
+	}
+
+	(item.lots || []).forEach(lot => {
+		(lot.bids || []).forEach(bid => {
+			if (!bid.digiwhistPrice || !bid.digiwhistPrice.netAmount) {
+				return;
+			}
+
+			buyer.body.company.totalValueOfContracts += bid.digiwhistPrice.netAmount;
+		});
+	});
+};
 
 let importBuyers = (items, cb) => {
 	if (items.length === 0) {
@@ -208,30 +326,38 @@ let importBuyers = (items, cb) => {
 				};
 				buyers.push(buyer);
 			}
+
 			calculateContractsCountToBuyer(buyer, item);
 			addCountryToBuyer(buyer, item);
-			// const tender = cloneDeep(item);
-			// delete tender.buyers;
-			//
-			//
-			// if (!buyer.tenders) {
-			// 	buyer.tenders = [];
-			// }
-			// if (tender.lots) {
-			// 	if (!buyer.contractsCount) {
-			// 		buyer.contractsCount = 0;
-			// 	}
-			// 	buyer.contractsCount += tender.lots.reduce((sum, lot) => {
-			// 		return sum + (lot.bids ? 1 : 0);
-			// 	}, 0);
-			// }
-			// delete tender.lots;
-			// buyer.tenders.push(tender);
+			calculateCpvCodesToBuyer(buyer, item);
+			calculateAwardDecisionDatesToBuyer(buyer, item);
+			calculateMostFrequentMarketToBuyer(buyer, item);
+			calculateTotalContractsToBuyer(buyer, item);
+
 			if (buyer.countries.indexOf(item.ot.country) < 0) {
 				buyer.countries.push(item.ot.country);
 			}
 			buyer.count++;
 		});
+	});
+	buyers.forEach((buyer) => {
+		const cpvs = Array.from(buyer.mostFrequentMarketMap.entries());
+		let cpv = cpvs[0];
+		cpvs.forEach(([code, count]) => {
+			if (cpv[1] < count) {
+				cpv = [code, count];
+			}
+		});
+		const label = library.getCPVName(cpv[0]);
+		delete buyer.mostFrequentMarketMap;
+		buyer.body.sector.mostFrequentMarket = `${cpv[0]} - ${label}`;
+
+
+
+		const yearsMin = Math.min(...buyer.body.dates.awardDecisionYears);
+		const yearsMax = Math.max(...buyer.body.dates.awardDecisionYears);
+
+		buyer.body.dates.awardDecisionYearsMinMax = `${yearsMin} - ${yearsMax}`;
 	});
 	let ids = buyers.map(buyer => {
 		return buyer.body.id;
@@ -260,6 +386,131 @@ let importBuyers = (items, cb) => {
 
 };
 
+let calculateContractsCountToSupplier = (supplier, item) => {
+	if (!item || !supplier) {
+		return;
+	}
+
+	if (item.lots) {
+		if (!supplier.body.contractsCount) {
+			supplier.body.contractsCount = 0;
+		}
+		supplier.body.contractsCount += item.lots.reduce((sum, lot) => {
+			return sum + (lot.bids ? 1 : 0);
+		}, 0);
+	}
+}
+
+let calculateAwardDecisionDatesToSupplier = (supplier, item) => {
+	if (!item || !supplier) {
+		return;
+	}
+
+	if (!supplier.body) {
+		supplier.body = {};
+	}
+	if (!supplier.body.dates) {
+		supplier.body.dates = {};
+	}
+	if (!supplier.body.dates.awardDecisionDates) {
+		supplier.body.dates.awardDecisionDates = [];
+	}
+	if (!supplier.body.dates.awardDecisionYears) {
+		supplier.body.dates.awardDecisionYears = [];
+	}
+
+	if (!item.lots) {
+		return;
+	}
+	if (!item.buyers || !item.buyers.some((buyer) => buyer.id === buyer.id)) {
+		return;
+	}
+
+	item.lots.forEach((lot) => {
+		if (!lot.awardDecisionDate) {
+			return;
+		}
+		if (!supplier.body.dates.awardDecisionDates.includes(lot.awardDecisionDate)) {
+			supplier.body.dates.awardDecisionDates.push(lot.awardDecisionDate);
+		}
+		const year = new Date(lot.awardDecisionDate).getFullYear();
+		if (!supplier.body.dates.awardDecisionYears.includes(year)) {
+			supplier.body.dates.awardDecisionYears.push(year);
+		}
+	});
+};
+
+let calculateCpvCodeToSupplier = (supplier, item) => {
+	if (!item || !supplier) {
+		return;
+	}
+	if (!supplier.body) {
+		supplier.body = {};
+	}
+	if (!supplier.body.sector) {
+		supplier.body.sector = {};
+	}
+	if (!supplier.body.sector.cpvs) {
+		supplier.body.sector.cpvs = [];
+	}
+
+	if (!item.cpvs) {
+		return;
+	}
+
+	item.cpvs.forEach((cpv) => {
+		if (!supplier.body.sector.cpvs.includes(cpv.code)) {
+			supplier.body.sector.cpvs.push(cpv.code);
+		}
+	});
+};
+
+let calculateMostFrequentMarketToSupplier = (supplier, item) => {
+	if (!item || !supplier) {
+		return;
+	}
+	if (!supplier.body) {
+		supplier.body = {};
+	}
+	if (!supplier.body.sector) {
+		supplier.body.sector = {};
+	}
+
+	if (!item.cpvs) {
+		return;
+	}
+	supplier.mostFrequentMarketMap = new Map();
+
+	item.cpvs.forEach((cpv) => {
+		const shortenCpv = cpv.code.toString().slice(0, 2);
+		if (!supplier.mostFrequentMarketMap.has(shortenCpv)) {
+			supplier.mostFrequentMarketMap.set(shortenCpv, 0);
+		}
+		supplier.mostFrequentMarketMap.set(shortenCpv, supplier.mostFrequentMarketMap.get(shortenCpv) + 1);
+	});
+};
+
+let calculateTotalContractsToSupplier = (supplier, bid) => {
+	if (!bid || !supplier) {
+		return;
+	}
+	if (!supplier.body) {
+		supplier.body = {};
+	}
+	if (!supplier.body.company) {
+		supplier.body.company = {};
+	}
+	if (!supplier.body.company.totalValueOfContracts) {
+		supplier.body.company.totalValueOfContracts = 0;
+	}
+
+	if (!bid.digiwhistPrice || !bid.digiwhistPrice.netAmount) {
+		return;
+	}
+
+	supplier.body.company.totalValueOfContracts += bid.digiwhistPrice.netAmount;
+};
+
 let importSuppliers = (items, cb) => {
 	if (items.length === 0) {
 		return cb();
@@ -282,6 +533,13 @@ let importSuppliers = (items, cb) => {
 						};
 						suppliers.push(supplier);
 					}
+
+					calculateCpvCodeToSupplier(supplier, item);
+					calculateAwardDecisionDatesToSupplier(supplier, item);
+					calculateMostFrequentMarketToSupplier(supplier, item);
+					calculateTotalContractsToSupplier(supplier, bid);
+					calculateContractsCountToSupplier(supplier, item);
+
 					supplier.count++;
 					if (supplier.countries.indexOf(item.ot.country) < 0) {
 						supplier.countries.push(item.ot.country);
@@ -292,6 +550,23 @@ let importSuppliers = (items, cb) => {
 	});
 	let ids = suppliers.map(supplier => {
 		return supplier.body.id;
+	});
+	suppliers.forEach((supplier) => {
+		const cpvs = Array.from(supplier.mostFrequentMarketMap.entries());
+		let cpv = cpvs[0];
+		cpvs.forEach(([code, count]) => {
+			if (cpv[1] < count) {
+				cpv = [code, count];
+			}
+		});
+		const label = library.getCPVName(cpv[0]);
+		delete supplier.mostFrequentMarketMap;
+		supplier.body.sector.mostFrequentMarket = `${cpv[0]} - ${label}`;
+
+		const yearsMin = Math.min(...supplier.body.dates.awardDecisionYears);
+		const yearsMax = Math.max(...supplier.body.dates.awardDecisionYears);
+
+		supplier.body.dates.awardDecisionYearsMinMax = `${yearsMin} - ${yearsMax}`;
 	});
 	store.Supplier.getByIds(ids, (err, result) => {
 		if (err) return cb(err);
