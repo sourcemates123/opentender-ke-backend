@@ -333,6 +333,13 @@ let importBuyers = (items, cb) => {
 			calculateAwardDecisionDatesToBuyer(buyer, item);
 			calculateMostFrequentMarketToBuyer(buyer, item);
 			calculateTotalContractsToBuyer(buyer, item);
+			buyer.body.indicator = {};
+			buyer.body.indicator.elementaryIntegrityIndicators = buyer.body.contractsCount * 100;
+			buyer.body.indicator.elementaryTransparencyIndicators = Math.floor(buyer.body.indicator.elementaryIntegrityIndicators / 10);
+			buyer.body.indicator.transparencyIndicatorCompositionScore = Math.floor((buyer.body.indicator.elementaryIntegrityIndicators + buyer.body.indicator.elementaryTransparencyIndicators) / 2);
+			buyer.body.indicator.elementaryTransparencyIndicatorsForCountries = {
+				KE: Math.max(0, Math.floor(buyer.body.indicator.elementaryIntegrityIndicators + buyer.body.indicator.elementaryTransparencyIndicators)),
+			};
 
 			if (buyer.countries.indexOf(item.ot.country) < 0) {
 				buyer.countries.push(item.ot.country);
@@ -350,14 +357,21 @@ let importBuyers = (items, cb) => {
 		});
 		const label = library.getCPVName(cpv[0]);
 		delete buyer.mostFrequentMarketMap;
-		buyer.body.sector.mostFrequentMarket = `${cpv[0]} - ${label}`;
-
-
+		buyer.body.sector.mostFrequentMarket = {
+			key: cpv[0],
+			label,
+		};
 
 		const yearsMin = Math.min(...buyer.body.dates.awardDecisionYears);
 		const yearsMax = Math.max(...buyer.body.dates.awardDecisionYears);
 
-		buyer.body.dates.awardDecisionYearsMinMax = `${yearsMin} - ${yearsMax}`;
+		buyer.body.dates.awardDecisionYearsMinMax = '';
+		if (Math.abs(yearsMin) !== Infinity) {
+			buyer.body.dates.awardDecisionYearsMinMax += `${yearsMin} - `;
+		}
+		if (Math.abs(yearsMax) !== Infinity) {
+			buyer.body.dates.awardDecisionYearsMinMax += `${yearsMax}`;
+		}
 	});
 	let ids = buyers.map(buyer => {
 		return buyer.body.id;
@@ -539,6 +553,15 @@ let importSuppliers = (items, cb) => {
 					calculateMostFrequentMarketToSupplier(supplier, item);
 					calculateTotalContractsToSupplier(supplier, bid);
 					calculateContractsCountToSupplier(supplier, item);
+					supplier.body.indicator = {};
+					supplier.body.indicator.transparencyIndicatorCompositionScore = supplier.body.contractsCount * 100;
+					supplier.body.indicator.elementaryTransparencyIndicatorsScore = Math.floor(1 / supplier.body.indicator.transparencyIndicatorCompositionScore * 100);
+					supplier.body.indicator.elementaryIntegrityIndicatorsForCountries = {
+						KE: Math.max(0, Math.floor(supplier.body.indicator.transparencyIndicatorCompositionScore + supplier.body.indicator.elementaryTransparencyIndicatorsScore)),
+					};
+					supplier.body.indicator.elementaryTransparencyIndicatorsForCountries = {
+						KE: Math.max(0, Math.floor(supplier.body.indicator.transparencyIndicatorCompositionScore + supplier.body.indicator.elementaryTransparencyIndicatorsScore)),
+					};
 
 					supplier.count++;
 					if (supplier.countries.indexOf(item.ot.country) < 0) {
@@ -561,12 +584,21 @@ let importSuppliers = (items, cb) => {
 		});
 		const label = library.getCPVName(cpv[0]);
 		delete supplier.mostFrequentMarketMap;
-		supplier.body.sector.mostFrequentMarket = `${cpv[0]} - ${label}`;
+		supplier.body.sector.mostFrequentMarket = {
+			key: cpv[0],
+			label,
+		}
 
 		const yearsMin = Math.min(...supplier.body.dates.awardDecisionYears);
 		const yearsMax = Math.max(...supplier.body.dates.awardDecisionYears);
 
-		supplier.body.dates.awardDecisionYearsMinMax = `${yearsMin} - ${yearsMax}`;
+		supplier.body.dates.awardDecisionYearsMinMax = '';
+		if (Math.abs(yearsMin) !== Infinity) {
+			supplier.body.dates.awardDecisionYearsMinMax += `${yearsMin} - `;
+		}
+		if (Math.abs(yearsMax) !== Infinity) {
+			supplier.body.dates.awardDecisionYearsMinMax += `${yearsMax}`;
+		}
 	});
 	store.Supplier.getByIds(ids, (err, result) => {
 		if (err) return cb(err);
