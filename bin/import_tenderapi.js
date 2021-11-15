@@ -401,6 +401,7 @@ let importBuyers = (items, cb) => {
             key: cpv[0],
             label,
         };
+        buyer.body.sector.cpvCodes = buyer.body.sector.cpvs.map((cpv) => cpv);
         buyer.body.sector.cpvs = buyer.body.sector.cpvs.map((cpv) => {
             return {
                 key: cpv,
@@ -638,6 +639,7 @@ let importSuppliers = (items, cb) => {
             key: cpv[0],
             label,
         }
+        supplier.body.sector.cpvCodes = supplier.body.sector.cpvs.map((cpv) => cpv);
         supplier.body.sector.cpvs = supplier.body.sector.cpvs.map((cpv) => {
             return {
                 key: cpv,
