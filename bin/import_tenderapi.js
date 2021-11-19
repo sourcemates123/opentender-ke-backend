@@ -139,8 +139,8 @@ let importTenderPackage = (array, filename, cb) => {
 
     async.waterfall([
         (next) => importBuyers(array, next),
-        (next) => importBulk(array, store.Tender, status_tenders, next),
-        (next) => importSuppliers(array, next)
+        (next) => importSuppliers(array, next),
+        (next) => importBulk(array, store.Tender, status_tenders, next)
     ], (err) => {
         cb(err);
     });
@@ -601,6 +601,7 @@ let importSuppliers = (items, cb) => {
                     calculateMostFrequentMarketToSupplier(supplier, item);
                     calculateTotalContractsToSupplier(supplier, bid);
                     calculateContractsCountToSupplier(supplier, item);
+                    item.lots[i1].bids[i2].bidders[i3].contractsCount = supplier.body.contractsCount;
                     item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
                     supplier.body.indicator = {};
                     supplier.body.indicator.elementaryIntegrityIndicators = calculateElementaryIndicators('INTEGRITY_', item);
