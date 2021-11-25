@@ -704,8 +704,8 @@ let importTenderPackageFiles = (filename, cb) => {
 };
 
 
-importTenderPackageFiles('KE-dataset.json', err => {
-// importTenderPackageFiles('KE-dataset-light.json', err => {
+importTenderPackageFiles('UG-dataset.json', err => {
+// importTenderPackageFiles('UG-dataset-light.json', err => {
 // importTenderPackageFiles('tenderapi_0000_2015-01-01T00-00-00-000.json', err => {
     if (err) {
         console.log(err);
