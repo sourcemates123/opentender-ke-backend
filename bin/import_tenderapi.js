@@ -382,6 +382,7 @@ let importBuyers = (items, cb) => {
       ) / 10000;
 
       item.buyers[index].indicator = buyer.body.indicator;
+      item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
 
       if (buyer.countries.indexOf(item.ot.country) < 0) {
         buyer.countries.push(item.ot.country);
@@ -618,7 +619,8 @@ let importSuppliers = (items, cb) => {
           ) / 10000;
 
           item.lots[i1].bids[i2].bidders[i3].indicator = supplier.body.indicator;
-
+          item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
+         
           supplier.count++;
           if (supplier.countries.indexOf(item.ot.country) < 0) {
             supplier.countries.push(item.ot.country);
