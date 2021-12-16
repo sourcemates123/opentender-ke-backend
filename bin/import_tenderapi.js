@@ -88,6 +88,7 @@ let importBulk = (array, index, status, cb) => {
     return cb();
   }
   let bulk_packages = safeBulkPackages(array);
+
   async.forEachSeries(bulk_packages, (bulk_package, next) => {
     index.bulk_add(bulk_package, (err) => {
       if (!err) {
@@ -135,6 +136,14 @@ let importTenderPackage = (array, filename, cb) => {
 
   array.forEach(item => {
     stats[item.country] = (stats[item.country] || 0) + 1;
+  });
+
+  array.forEach(item => {
+    item.ot.indicators = Object.entries(item.ot.indicator).map(([indicator, value]) => ({
+      type: indicator,
+      value,
+      status: 'CALCULATED',
+    }));
   });
 
   async.waterfall([
@@ -370,6 +379,8 @@ let importBuyers = (items, cb) => {
       calculateTotalContractsToBuyer(buyer, item);
       item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
       buyer.body.indicator = {};
+      buyer.ot = {};
+      buyer.ot.indicators = item.ot.indicators;
       buyer.body.indicator.elementaryIntegrityIndicators = calculateElementaryIndicators('INTEGRITY_', item);
       buyer.body.indicator.elementaryTransparencyIndicators = calculateElementaryIndicators('TRANSPARENCY_', item);
       buyer.body.indicator.transparencyIndicatorCompositionScore = Math.floor(
@@ -606,6 +617,8 @@ let importSuppliers = (items, cb) => {
           calculateContractsCountToSupplier(supplier, item);
           item.lots[i1].bids[i2].bidders[i3].contractsCount = supplier.body.contractsCount;
           item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
+          supplier.ot = {};
+          supplier.ot.indicators = item.ot.indicators;
           supplier.body.indicator = {};
           supplier.body.indicator.elementaryIntegrityIndicators = calculateElementaryIndicators('INTEGRITY_', item);
           supplier.body.indicator.elementaryTransparencyIndicators = calculateElementaryIndicators('TRANSPARENCY_', item);
