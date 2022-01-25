@@ -344,8 +344,8 @@ function calculateElementaryIndicators(type, tender) {
     .map(([key, value]) => ({type: key, value, status: 'CALCULATED'}))
     .filter(filterIndicators).map(extractIndicatorValue);
   return {
-    tender: Math.floor(tenderIndicators.length && tenderIndicators.reduce((acc, value) => acc + value, 0) / tenderIndicators.length * 10000) / 10000,
-    lot: Math.floor(lotIndicators.length && lotIndicators.reduce((acc, value) => acc + value, 0) / lotIndicators.length * 10000) / 10000,
+    tender: Math.floor(tenderIndicators.length && tenderIndicators.reduce((acc, value) => acc + value, 0) / tenderIndicators.length),
+    lot: Math.floor(lotIndicators.length && lotIndicators.reduce((acc, value) => acc + value, 0) / lotIndicators.length) ,
   };
 }
 
@@ -385,12 +385,12 @@ let importBuyers = (items, cb) => {
       buyer.body.indicator.elementaryTransparencyIndicators = calculateElementaryIndicators('TRANSPARENCY_', item);
       buyer.body.indicator.transparencyIndicatorCompositionScore = Math.floor(
         (buyer.body.indicator.elementaryTransparencyIndicators.tender +
-          buyer.body.indicator.elementaryTransparencyIndicators.lot) / 2 * 10000,
-      ) / 10000;
+          buyer.body.indicator.elementaryTransparencyIndicators.lot) / 2,
+      );
       buyer.body.indicator.integrityIndicatorCompositionScore = Math.floor(
         (buyer.body.indicator.elementaryIntegrityIndicators.tender +
-          buyer.body.indicator.elementaryIntegrityIndicators.lot) / 2 * 10000,
-      ) / 10000;
+          buyer.body.indicator.elementaryIntegrityIndicators.lot) / 2,
+      );
 
       item.buyers[index].indicator = buyer.body.indicator;
       item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
@@ -624,16 +624,16 @@ let importSuppliers = (items, cb) => {
           supplier.body.indicator.elementaryTransparencyIndicators = calculateElementaryIndicators('TRANSPARENCY_', item);
           supplier.body.indicator.transparencyIndicatorCompositionScore = Math.floor(
             (supplier.body.indicator.elementaryTransparencyIndicators.tender +
-              supplier.body.indicator.elementaryTransparencyIndicators.lot) / 2 * 10000,
-          ) / 10000;
+              supplier.body.indicator.elementaryTransparencyIndicators.lot) / 2,
+          );
           supplier.body.indicator.integrityIndicatorCompositionScore = Math.floor(
             (supplier.body.indicator.elementaryIntegrityIndicators.tender +
-              supplier.body.indicator.elementaryIntegrityIndicators.lot) / 2 * 10000,
-          ) / 10000;
+              supplier.body.indicator.elementaryIntegrityIndicators.lot) / 2,
+          );
 
           item.lots[i1].bids[i2].bidders[i3].indicator = supplier.body.indicator;
           item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
-         
+
           supplier.count++;
           if (supplier.countries.indexOf(item.ot.country) < 0) {
             supplier.countries.push(item.ot.country);
