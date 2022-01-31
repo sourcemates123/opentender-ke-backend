@@ -437,6 +437,23 @@ let importBuyers = (items, cb) => {
     let ids = buyers.map(buyer => {
         return buyer.body.id;
     });
+    buyers.forEach((buyer) => {
+     buyer.body.company = {};
+     buyer.body.company.totalValueOfContracts = 0;
+     items.forEach((item) => {
+       let valid = false;
+       (item.buyers || []).forEach((body, index) => {
+         if (body.id === buyer.id) {
+           valid = true;
+         }
+       });
+
+       if (valid) {
+         buyer.body.company.totalValueOfContracts += item.finalPrice.netAmountNational;
+       }
+     });
+     buyer.body.company.totalValueOfContracts /= 100;
+   });
     store.Buyer.getByIds(ids, (err, result) => {
         if (err) return cb(err);
         let new_list = [];
@@ -677,6 +694,26 @@ let importSuppliers = (items, cb) => {
         if (Math.abs(yearsMax) !== Infinity) {
             supplier.body.dates.awardDecisionYearsMinMax += `${yearsMax}`;
         }
+    });
+    suppliers.forEach((supplier) => {
+     supplier.body.company = {};
+     supplier.body.company.totalValueOfContracts = 0;
+     items.forEach((item) => {
+       let valid = false;
+       (item.lots || []).forEach((lot) => {
+         (lot.bids || []).forEach((bid) => {
+           (bid.bidders || []).forEach((body) => {
+             if (body.id === supplier.id) {
+               valid = true;
+             }
+           });
+         });
+       });
+       if (valid) {
+         supplier.body.company.totalValueOfContracts += item.finalPrice.netAmountNational;
+       }
+     });
+     supplier.body.company.totalValueOfContracts /= 100;
     });
     store.Supplier.getByIds(ids, (err, result) => {
         if (err) return cb(err);
