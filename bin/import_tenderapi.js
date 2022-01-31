@@ -324,11 +324,10 @@ let calculateTotalContractsToBuyer = (buyer, item) => {
 
     (item.lots || []).forEach(lot => {
         (lot.bids || []).forEach(bid => {
-            if (!bid.digiwhistPrice || !bid.digiwhistPrice.netAmount) {
+            if (!bid.price || !bid.price.netAmount) {
                 return;
             }
-
-            buyer.body.company.totalValueOfContracts += bid.digiwhistPrice.netAmount;
+            buyer.body.company.totalValueOfContracts += bid.price.netAmount;
         });
     });
 };
@@ -376,8 +375,6 @@ let importBuyers = (items, cb) => {
             calculateCpvCodesToBuyer(buyer, item);
             calculateAwardDecisionDatesToBuyer(buyer, item);
             calculateMostFrequentMarketToBuyer(buyer, item);
-            calculateTotalContractsToBuyer(buyer, item);
-            item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
             buyer.body.indicator = {};
             buyer.ot = {};
             buyer.ot.indicators = item.ot.indicators;
@@ -393,7 +390,7 @@ let importBuyers = (items, cb) => {
             ) / 10000;
 
             item.buyers[index].indicator = buyer.body.indicator;
-            item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
+            // item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
 
             if (buyer.countries.indexOf(item.ot.country) < 0) {
                 buyer.countries.push(item.ot.country);
@@ -436,6 +433,24 @@ let importBuyers = (items, cb) => {
     });
     let ids = buyers.map(buyer => {
         return buyer.body.id;
+    });
+
+    buyers.forEach((buyer) => {
+        buyer.body.company = {};
+        buyer.body.company.totalValueOfContracts = 0;
+        items.forEach((item) => {
+            let valid = false;
+            (item.buyers || []).forEach((body, index) => {
+                if (body.id === buyer.id) {
+                    valid = true;
+                }
+            });
+
+            if (valid) {
+                buyer.body.company.totalValueOfContracts += item.finalPrice.netAmountNational;
+            }
+        });
+        buyer.body.company.totalValueOfContracts /= 100;
     });
     store.Buyer.getByIds(ids, (err, result) => {
         if (err) return cb(err);
@@ -565,8 +580,8 @@ let calculateMostFrequentMarketToSupplier = (supplier, item) => {
     });
 };
 
-let calculateTotalContractsToSupplier = (supplier, bid) => {
-    if (!bid || !supplier) {
+let calculateTotalContractsToSupplier = (supplier, item) => {
+    if (!item || !supplier) {
         return;
     }
     if (!supplier.body) {
@@ -579,11 +594,11 @@ let calculateTotalContractsToSupplier = (supplier, bid) => {
         supplier.body.company.totalValueOfContracts = 0;
     }
 
-    if (!bid.digiwhistPrice || !bid.digiwhistPrice.netAmount) {
+    if (!item.finalPrice || !item.finalPrice.netAmountNational) {
         return;
     }
 
-    supplier.body.company.totalValueOfContracts += bid.digiwhistPrice.netAmount;
+    supplier.body.company.totalValueOfContracts += item.finalPrice.netAmountNational;
 };
 
 let importSuppliers = (items, cb) => {
@@ -613,10 +628,8 @@ let importSuppliers = (items, cb) => {
                     calculateCpvCodeToSupplier(supplier, item);
                     calculateAwardDecisionDatesToSupplier(supplier, item);
                     calculateMostFrequentMarketToSupplier(supplier, item);
-                    calculateTotalContractsToSupplier(supplier, bid);
                     calculateContractsCountToSupplier(supplier, item);
                     item.lots[i1].bids[i2].bidders[i3].contractsCount = supplier.body.contractsCount;
-                    item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
                     supplier.ot = {};
                     supplier.ot.indicators = item.ot.indicators;
                     supplier.body.indicator = {};
@@ -632,7 +645,6 @@ let importSuppliers = (items, cb) => {
                     ) / 10000;
 
                     item.lots[i1].bids[i2].bidders[i3].indicator = supplier.body.indicator;
-                    item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
 
                     supplier.count++;
                     if (supplier.countries.indexOf(item.ot.country) < 0) {
@@ -677,6 +689,26 @@ let importSuppliers = (items, cb) => {
         if (Math.abs(yearsMax) !== Infinity) {
             supplier.body.dates.awardDecisionYearsMinMax += `${yearsMax}`;
         }
+    });
+    suppliers.forEach((supplier) => {
+        supplier.body.company = {};
+        supplier.body.company.totalValueOfContracts = 0;
+        items.forEach((item) => {
+            let valid = false;
+            (item.lots || []).forEach((lot) => {
+                (lot.bids || []).forEach((bid) => {
+                    (bid.bidders || []).forEach((body) => {
+                        if (body.id === supplier.id) {
+                            valid = true;
+                        }
+                    });
+                });
+            });
+            if (valid) {
+                supplier.body.company.totalValueOfContracts += item.finalPrice.netAmountNational;
+            }
+        });
+        supplier.body.company.totalValueOfContracts /= 100;
     });
     store.Supplier.getByIds(ids, (err, result) => {
         if (err) return cb(err);
