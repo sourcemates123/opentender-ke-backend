@@ -28,6 +28,7 @@ let status_buyers = status.addItem('buyers', {type: ['count']});
 const Store = require('../lib/store.js');
 const Library = require('../lib/library.js');
 const Converter = require('../lib/convert.js');
+const Utils = require('../lib/utils');
 
 const config = require('../config.js');
 const data_path = config.data.tenderapi;
@@ -437,6 +438,37 @@ let importBuyers = (items, cb) => {
 	let ids = buyers.map(buyer => {
 		return buyer.body.id;
 	});
+
+	buyers.forEach((buyer) => {
+		buyer.body.company = {};
+		buyer.body.company.totalValueOfContracts = 0;
+		items.forEach((item) => {
+			let valid = false;
+
+			(item.buyers || []).forEach((body, index) => {
+				if (body.id === buyer.id) {
+					valid = true;
+				}
+			});
+
+			if (valid && item.lots && item.lots.length) {
+				item.lots.forEach((lot) => {
+					if (lot.estimatedPrice) {
+						buyer.body.company.totalValueOfContracts += lot.estimatedPrice.netAmountNational;
+					}
+				})
+			}
+		});
+		buyer.body.company.totalValueOfContracts /= 100;
+		buyer.body.company.totalValueOfContracts = Utils.roundValueTwoDecimals(buyer.body.company.totalValueOfContracts)
+		items.forEach((item) => {
+			(item.buyers || []).forEach((body, index) => {
+				if (body.id === buyer.id) {
+					item.buyers[index].totalValueOfContracts = buyer.body.company.totalValueOfContracts;
+				}
+			});
+		});
+	});
 	store.Buyer.getByIds(ids, (err, result) => {
 		if (err) return cb(err);
 		let new_list = [];
@@ -677,6 +709,43 @@ let importSuppliers = (items, cb) => {
 		if (Math.abs(yearsMax) !== Infinity) {
 			supplier.body.dates.awardDecisionYearsMinMax += `${yearsMax}`;
 		}
+	});
+	suppliers.forEach((supplier) => {
+		supplier.body.company = {};
+		supplier.body.company.totalValueOfContracts = 0;
+		items.forEach((item) => {
+			let valid = false;
+			(item.lots || []).forEach((lot) => {
+				(lot.bids || []).forEach((bid) => {
+					(bid.bidders || []).forEach((body) => {
+						if (body.id === supplier.id) {
+							valid = true;
+						}
+					});
+				});
+			});
+			if (valid && item.lots && item.lots.length) {
+				item.lots.forEach((lot) => {
+					if (lot.estimatedPrice) {
+						supplier.body.company.totalValueOfContracts += lot.estimatedPrice.netAmountNational;
+					}
+				})
+			}
+		});
+		supplier.body.company.totalValueOfContracts /= 100;
+		supplier.body.company.totalValueOfContracts = Utils.roundValueTwoDecimals(supplier.body.company.totalValueOfContracts)
+
+		items.forEach((item) => {
+			(item.lots || []).forEach((lot, i1) => {
+				(lot.bids || []).forEach((bid, i2) => {
+					(bid.bidders || []).forEach((body, i3) => {
+						if (body.id === supplier.id) {
+							item.lots[i1].bids[i2].bidders[i3].totalValueOfContracts = supplier.body.company.totalValueOfContracts;
+						}
+					});
+				});
+			});
+		});
 	});
 	store.Supplier.getByIds(ids, (err, result) => {
 		if (err) return cb(err);
